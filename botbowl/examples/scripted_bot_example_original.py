@@ -11,8 +11,6 @@ from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for ty
 
 class MyScriptedBot(ProcBot):
 
-    #comentario de prueba
-
     def __init__(self, name):
         super().__init__(name)
         self.my_team = None

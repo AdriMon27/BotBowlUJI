@@ -10,6 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
+TIME_THINKING = 1.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
@@ -23,6 +24,7 @@ class MyScriptedBot2(ProcBot):
 
         #variables para hacer el aleatorio de la estrategia
         self.orden_operaciones = []
+        self.index_operacion = 0
         self.n_operaciones = 10
 
         self.off_formation = [
@@ -251,43 +253,70 @@ class MyScriptedBot2(ProcBot):
         game_copy.home_agent.human = True
         game_copy.away_agent.human = True
 
+        my_team_copy = None
+        opp_team_copy = None
+
+        home_team = game_copy.get_agent_team(game_copy.home_agent)
+        away_team = game_copy.get_agent_team(game_copy.away_agent)
+        if home_team == self.my_team:
+            my_team_copy = home_team
+            opp_team_copy = away_team
+        else:
+            my_team_copy = away_team
+            opp_team_copy = home_team
+
         root_step = game_copy.get_step()
 
         best_combination = None
+        #best_combination = self._random_orden_operaciones()
 
         #bucle para el OSLA
         while time.time() - initial_time < time_difference:
 
-            #revertir los cambios
-            game_copy.revert(root_step)
-
             #generar nueva combinacion de acciones
             nueva_combinacion_operaciones = self._random_orden_operaciones()
+            #nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
             #ejecutar la combinacion en el game_copy
             for operation in nueva_combinacion_operaciones:
-                game_copy.step(self._strategy_random(game, ball_carrier, operation))
+                actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy, opp_team_copy)
 
-                #estas 2 lineas las he copiado tal cual, no se exactamente como funcionan
-                while not game.state.game_over and len(game.state.available_actions) == 0:
-                    game_copy.step()
+                # Update teams
+                my_team_copy = game_copy.get_team_by_id(my_team_copy.team_id)
+                opp_team_copy = game_copy.get_team_by_id(opp_team_copy.team_id)
+
+                if actual_actions is not None:
+                    #print(game_copy.home_agent.my_team.players)
+                    #print(my_team_copy.players)
+                    for action in actual_actions:
+                        if game_copy._is_action_allowed(action):
+                            game_copy.step(action)
+                    #print(game_copy.home_agent.my_team.players)
+                    #print(my_team_copy.players)
+
+                    #estas 2 lineas las he copiado tal cual, no se exactamente como funcionan
+                    while not game.state.game_over and len(game.state.available_actions) == 0:
+                        game_copy.step()
 
             # insertar la combinacion al mapa de combinacion-evaluacion
             tuplaOperaciones = tuple(nueva_combinacion_operaciones)
-            combination_score = self._evaluate(game.copy)
+            combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy)
             combinations_evaluations_map[hash(tuplaOperaciones)] = combination_score
             # Y comprobar si es mejor que la previa mejor combinacion
             if best_combination is None or combination_score > combinations_evaluations_map[hash(best_combination)]:
                 best_combination = tuplaOperaciones
 
+            # revertir los cambios
+            game_copy.revert(root_step)
+
         return best_combination
 
-    def _evaluate(self, game):
+    def _evaluate(self, game, my_team, opp_team):
         puntos = 0
 
 
         #mirar los jugadores
-        for player in self.my_team.players:
+        for player in my_team.players:
             # Que tenemos de pie y no estuneados
             if player.position is not None and player.state.up and not player.state.stunned:
                 puntos += 1
@@ -308,7 +337,7 @@ class MyScriptedBot2(ProcBot):
                 puntos += 1
 
         #mirar los jugadores rivales tumbados o estuneados
-        for rival_player in self.opp_team.players:
+        for rival_player in opp_team.players:
             if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
                 puntos += 1
 
@@ -343,25 +372,57 @@ class MyScriptedBot2(ProcBot):
         return action
 
     def _make_plan(self, game: botbowl.Game, ball_carrier):
-        #self._strategy_random(game, ball_carrier)
-        #self._strategy_one(game, ball_carrier)
-        mejor_jugada = self._act_in_game_copy(game, ball_carrier, 1)    #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+        # estrategia 1
+        # self._strategy_one(game, ball_carrier)
 
-        for jugada in mejor_jugada:
-            actions = self._strategy_random(game, ball_carrier, jugada)
-            self._add_actions(actions)
+        #mirar si ya tenemos la combinación idonea para este turno
+        if (self.orden_operaciones == []):
+            # trasteo random
+            # self.orden_operaciones = self._random_orden_operaciones()
+            self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+            # estrategia OSLA
+            #self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
+
+        #print(self.orden_operaciones)
+
+        #añadir acciones a self.acciones
+        actions = []
+        actions = self._check_index_operacion_in_range(game, ball_carrier)
+
+        while actions is None:
+            self.index_operacion += 1
+            actions = self._check_index_operacion_in_range(game, ball_carrier)
+
+        self._add_actions(actions)
+        self.index_operacion += 1
+
+    def _check_index_operacion_in_range(self, game, ball_carrier):
+        """
+        Checks if self.index_operacion is inside the range of len(self.orden_operaciones)
+        :return: The actions of self.strategy_random with this index
+        """
+        actions = []
+        if self.index_operacion >= len(self.orden_operaciones):
+            actions = self._strategy_random(game, ball_carrier, self.index_operacion, self.my_team, self.opp_team)   #end_turn
+            self.index_operacion = 0    #reiniciar para el siguiente turno
+            self.orden_operaciones = [] #reiniciar para el siguiente turno y así calcular una nueva combinacion
+        else:
+            actions = self._strategy_random(game, ball_carrier, self.orden_operaciones[self.index_operacion], self.my_team, self.opp_team)
+
+        return actions
 
     #region Strategy Functions
     #He puesto que cada funcion que necesita leer de open_players lo calcule internamente en vez de pasarle el array
     #Esto para poder hacer las funciones en distinto orden sin que el array esté mal
-    def _stand_up_marked_players(self, game: botbowl.Game, ball_carrier):
+    def _stand_up_marked_players(self, game: botbowl.Game, ball_carrier, my_team):
         """Stand up marked players
 
         :param game: the Game itself
         :param ball_carrier: who is carrying the ball
         :returns: The list of actions if there is any action available, otherwise None
         """
-        for player in self.my_team.players:
+        for player in my_team.players:
             if player.position is not None and not player.state.up and not player.state.stunned and not player.state.used:
                 if game.num_tackle_zones_in(player) > 0:
                     #self.actions.append(Action(ActionType.START_MOVE, player=player))
@@ -373,7 +434,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _move_ball_carrier_to_endzone(self, game: botbowl.Game, ball_carrier):
+    def _move_ball_carrier_to_endzone(self, game: botbowl.Game, ball_carrier, my_team):
         """Try to move the ball_carrier to the endzone
         First, it checks if the ball_carrier has high probability (70%)
         If not, Hand-off action to scoring player
@@ -384,7 +445,7 @@ class MyScriptedBot2(ProcBot):
         :returns: The list of actions is any action available, otherwise None
         """
         actions = None
-        if ball_carrier is not None and ball_carrier.team == self.my_team and not ball_carrier.state.used:
+        if ball_carrier is not None and ball_carrier.team == my_team and not ball_carrier.state.used:
             # print("2.1 Can ball carrier score with high probability")
             td_path = pf.get_safest_path_to_endzone(game, ball_carrier, allow_team_reroll=True)
             if td_path is not None and td_path.prob >= 0.7:
@@ -401,7 +462,7 @@ class MyScriptedBot2(ProcBot):
 
                 # Get players in scoring range
                 unused_teammates = []
-                for player in self.my_team.players:
+                for player in my_team.players:
                     if player.position is not None and player != ball_carrier and not player.state.used and player.state.up:
                         unused_teammates.append(player)
 
@@ -424,7 +485,7 @@ class MyScriptedBot2(ProcBot):
                         handoff_path = handoff_path
 
                 # Hand-off if high probability or last turn
-                if handoff_path is not None and (handoff_p >= 0.7 or self.my_team.state.turn == 8):
+                if handoff_path is not None and (handoff_p >= 0.7 or my_team.state.turn == 8):
                     #self.actions.append(Action(ActionType.START_HANDOFF, player=ball_carrier))
                     #self.actions.extend(path_to_move_actions(game, ball_carrier, handoff_path))
                     actions = []
@@ -438,7 +499,7 @@ class MyScriptedBot2(ProcBot):
                 paths = pf.get_all_paths(game, ball_carrier)
                 best_path = None
                 best_distance = 100
-                target_x = game.get_opp_endzone_x(self.my_team)
+                target_x = game.get_opp_endzone_x(my_team)
                 for path in paths:
                     distance_to_endzone = abs(target_x - path.steps[-1].x)
                     if path.prob == 1 and (
@@ -457,7 +518,7 @@ class MyScriptedBot2(ProcBot):
 
             return None
 
-    def _safe_blocks(self, game: botbowl.Game, ball_carrier):
+    def _safe_blocks(self, game: botbowl.Game, ball_carrier, my_team):
         """Check if the safest block is safe enough
 
         :param game: the Game itself
@@ -465,7 +526,7 @@ class MyScriptedBot2(ProcBot):
         :returns: The list of actions if it is safe enough, otherwise None
         """
         attacker, defender, p_self_up, p_opp_down, block_p_fumble_self, block_p_fumble_opp = self._get_safest_block(
-            game)
+            game, my_team)
         if attacker is not None and p_self_up > 0.94 and block_p_fumble_self == 0:
             #self.actions.append(Action(ActionType.START_BLOCK, player=attacker))
             #self.actions.append(Action(ActionType.BLOCK, position=defender.position))
@@ -477,7 +538,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _pickup_ball(self, game: botbowl.Game, ball_carrier):
+    def _pickup_ball(self, game: botbowl.Game, ball_carrier, my_team):
         """Try to pick up the ball if there is no ball_carrier
 
         :param game: the Game itself
@@ -489,7 +550,7 @@ class MyScriptedBot2(ProcBot):
             pickup_p = None
             pickup_player = None
             pickup_path = None
-            for player in self.my_team.players:
+            for player in my_team.players:
                 if player.position is not None and not player.state.used:
                     if player.position.distance(game.get_ball_position()) <= player.get_ma() + 2:
                         path = pf.get_safest_path(game, player, game.get_ball_position())
@@ -507,12 +568,12 @@ class MyScriptedBot2(ProcBot):
 
                 # Find safest path towards endzone
                 if game.num_tackle_zones_at(pickup_player, game.get_ball_position()) == 0 and game.get_opp_endzone_x(
-                        self.my_team) != game.get_ball_position().x:
+                        my_team) != game.get_ball_position().x:
                     paths = pf.get_all_paths(game, pickup_player, from_position=game.get_ball_position(),
                                              num_moves_used=len(pickup_path))
                     best_path = None
                     best_distance = 100
-                    target_x = game.get_opp_endzone_x(self.my_team)
+                    target_x = game.get_opp_endzone_x(my_team)
                     for path in paths:
                         distance_to_endzone = abs(target_x - path.steps[-1].x)
                         if path.prob == 1 and (
@@ -528,7 +589,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _move_receivers_into_scoring_distance(self, game: botbowl.Game, ball_carrier):
+    def _move_receivers_into_scoring_distance(self, game: botbowl.Game, ball_carrier, my_team):
         """Check how many open_players there are and move them if they can CATCH and if it is possible
 
         :param game: the Game itself
@@ -537,7 +598,7 @@ class MyScriptedBot2(ProcBot):
         """
         # Scan for unused players that are not marked
         open_players = []
-        for player in self.my_team.players:
+        for player in my_team.players:
             if player.position is not None and not player.state.used and game.num_tackle_zones_in(player) == 0:
                 open_players.append(player)
 
@@ -548,7 +609,7 @@ class MyScriptedBot2(ProcBot):
                 paths = pf.get_all_paths(game, player)
                 best_path = None
                 best_distance = 100
-                target_x = game.get_opp_endzone_x(self.my_team)
+                target_x = game.get_opp_endzone_x(my_team)
                 for path in paths:
                     distance_to_endzone = abs(target_x - path.steps[-1].x)
                     if path.prob == 1 and (
@@ -567,7 +628,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _blitz_with_open_block_players(self, game: botbowl.Game, ball_carrier):
+    def _blitz_with_open_block_players(self, game: botbowl.Game, ball_carrier, my_team):
         """Try to Blitz
 
         :param game: the Game itself
@@ -576,7 +637,7 @@ class MyScriptedBot2(ProcBot):
         """
         # Scan for unused players that are not marked
         open_players = []
-        for player in self.my_team.players:
+        for player in my_team.players:
             if player.position is not None and not player.state.used and game.num_tackle_zones_in(player) == 0:
                 open_players.append(player)
 
@@ -618,7 +679,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _make_cage_around_ball_player(self, game: botbowl.Game, ball_carrier):
+    def _make_cage_around_ball_player(self, game: botbowl.Game, ball_carrier, my_team):
         """Try to make a cage around the ball_carrier
 
         :param game: the Game itself
@@ -627,7 +688,7 @@ class MyScriptedBot2(ProcBot):
         """
         # Scan for unused players that are not marked
         open_players = []
-        for player in self.my_team.players:
+        for player in my_team.players:
             if player.position is not None and not player.state.used and game.num_tackle_zones_in(player) == 0:
                 open_players.append(player)
 
@@ -659,7 +720,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _scan_for_assist_positons(self, game: botbowl.Game, ball_carrier):
+    def _scan_for_assist_positons(self, game: botbowl.Game, ball_carrier, my_team, opp_team):
         """Calculate the assist_positions and try to put the open_players there
 
         :param game: the Game itself
@@ -668,20 +729,20 @@ class MyScriptedBot2(ProcBot):
         """
         # Scan for unused players that are not marked
         open_players = []
-        for player in self.my_team.players:
+        for player in my_team.players:
             if player.position is not None and not player.state.used and game.num_tackle_zones_in(player) == 0:
                 open_players.append(player)
 
         # Scan for assist positions
         assist_positions = set()
-        for player in game.get_opp_team(self.my_team).players:
+        for player in game.get_opp_team(my_team).players:
             if player.position is None or not player.state.up:
                 continue
             for opponent in game.get_adjacent_opponents(player, down=False):
                 att_str, def_str = game.get_block_strengths(player, opponent)
                 if def_str >= att_str:
                     for open_position in game.get_adjacent_squares(player.position, occupied=False):
-                        if len(game.get_adjacent_players(open_position, team=self.opp_team, down=False)) == 1:
+                        if len(game.get_adjacent_players(open_position, team=opp_team, down=False)) == 1:
                             assist_positions.add(open_position)
 
         for player in open_players:
@@ -698,7 +759,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _move_towards_the_ball(self, game: botbowl.Game, ball_carrier):
+    def _move_towards_the_ball(self, game: botbowl.Game, ball_carrier, my_team):
         """Move the open_players towards the ball
 
         :param game: the Game itself
@@ -707,7 +768,7 @@ class MyScriptedBot2(ProcBot):
         """
         # Scan for unused players that are not marked
         open_players = []
-        for player in self.my_team.players:
+        for player in my_team.players:
             if player.position is not None and not player.state.used and game.num_tackle_zones_in(player) == 0:
                 open_players.append(player)
 
@@ -724,7 +785,7 @@ class MyScriptedBot2(ProcBot):
                     if shortest_distance is None or (p.prob == 1 and distance < shortest_distance):
                         shortest_distance = distance
                         path = p
-            elif ball_carrier.team != self.my_team:
+            elif ball_carrier.team != my_team:
                 for p in pf.get_all_paths(game, player):
                     distance = p.get_last_step().distance(ball_carrier.position)
                     if shortest_distance is None or (p.prob == 1 and distance < shortest_distance):
@@ -742,7 +803,7 @@ class MyScriptedBot2(ProcBot):
 
         return None
 
-    def _risky_blocks(self, game: botbowl.Game, ball_carrier):
+    def _risky_blocks(self, game: botbowl.Game, ball_carrier, my_team):
         """Try to do risky blocks
 
         :param game: the Game itself
@@ -750,7 +811,7 @@ class MyScriptedBot2(ProcBot):
         :returns: The list of actions if it is possible, otherwise None
         """
         attacker, defender, p_self_up, p_opp_down, block_p_fumble_self, block_p_fumble_opp = self._get_safest_block(
-            game)
+            game, my_team)
         if attacker is not None and (p_opp_down > (1 - p_self_up) or block_p_fumble_opp > 0):
             #self.actions.append(Action(ActionType.START_BLOCK, player=attacker))
             #self.actions.append(Action(ActionType.BLOCK, position=defender.position))
@@ -780,61 +841,61 @@ class MyScriptedBot2(ProcBot):
 
     def _strategy_one(self, game: botbowl.Game, ball_carrier):
         # print("1. Stand up marked players")
-        actions_to_append = self._stand_up_marked_players(game, ball_carrier)
+        actions_to_append = self._stand_up_marked_players(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("2. Move ball carrier to endzone")
-        actions_to_append = self._move_ball_carrier_to_endzone(game, ball_carrier)
+        actions_to_append = self._move_ball_carrier_to_endzone(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("3. Safe blocks")
-        actions_to_append = self._safe_blocks(game, ball_carrier)
+        actions_to_append = self._safe_blocks(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("4. Pickup ball")
-        actions_to_append = self._pickup_ball(game, ball_carrier)
+        actions_to_append = self._pickup_ball(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("5. Move receivers into scoring distance if not already")
-        actions_to_append = self._move_receivers_into_scoring_distance(game, ball_carrier)
+        actions_to_append = self._move_receivers_into_scoring_distance(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("6. Blitz with open block players")
-        actions_to_append = self._blitz_with_open_block_players(game, ball_carrier)
+        actions_to_append = self._blitz_with_open_block_players(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("7. Make cage around ball carrier")
-        actions_to_append = self._make_cage_around_ball_player(game, ball_carrier)
+        actions_to_append = self._make_cage_around_ball_player(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("8. Move non-marked players to assist")
-        actions_to_append = self._scan_for_assist_positons(game, ball_carrier)
+        actions_to_append = self._scan_for_assist_positons(game, ball_carrier, self.my_team, self.opp_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("9. Move towards the ball")
-        actions_to_append = self._move_towards_the_ball(game, ball_carrier)
+        actions_to_append = self._move_towards_the_ball(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
 
         # print("10. Risky blocks")
-        actions_to_append = self._risky_blocks(game, ball_carrier)
+        actions_to_append = self._risky_blocks(game, ball_carrier, self.my_team)
         if actions_to_append is not None:
             self._add_actions(actions_to_append)
             return
@@ -844,7 +905,7 @@ class MyScriptedBot2(ProcBot):
         actions_to_append.append(self._end_turn(game, ball_carrier))
         self._add_actions(actions_to_append)
 
-    def _strategy_random(self, game: botbowl.Game, ball_carrier, num_function):
+    def _strategy_random(self, game: botbowl.Game, ball_carrier, num_function, my_team, opp_team):
         """
         Pass the actions
 
@@ -854,61 +915,63 @@ class MyScriptedBot2(ProcBot):
         :returns: The list of actions of that function
         """
         actions = []
-        for i in self.orden_operaciones:
-            if i == 0:
-                actions = self._stand_up_marked_players(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 1:
-                actions = self._move_ball_carrier_to_endzone(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 2:
-                actions = self._safe_blocks(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 3:
-                actions = self._pickup_ball(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 4:
-                actions = self._move_receivers_into_scoring_distance(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 5:
-                actions = self._blitz_with_open_block_players(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 6:
-                actions = self._make_cage_around_ball_player(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 7:
-                actions = self._scan_for_assist_positons(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 8:
-                actions = self._move_towards_the_ball(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            elif i == 9:
-                actions = self._risky_blocks(game, ball_carrier)
-                if actions is not None:
-                    return actions
-            else:
-                print("No se debería llegar al else")
+        #for i in self.orden_operaciones:
+        if num_function == 0:
+            actions = self._stand_up_marked_players(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 1:
+            actions = self._move_ball_carrier_to_endzone(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 2:
+            actions = self._safe_blocks(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 3:
+            actions = self._pickup_ball(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 4:
+            actions = self._move_receivers_into_scoring_distance(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 5:
+            actions = self._blitz_with_open_block_players(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 6:
+            actions = self._make_cage_around_ball_player(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 7:
+            actions = self._scan_for_assist_positons(game, ball_carrier, my_team, opp_team)
+            if actions is not None:
+                return actions
+        elif num_function == 8:
+            actions = self._move_towards_the_ball(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        elif num_function == 9:
+            actions = self._risky_blocks(game, ball_carrier, my_team)
+            if actions is not None:
+                return actions
+        else:
+            actions.append(self._end_turn(game, ball_carrier))
+            print("Fuera de rango -> End_turn")
+            return actions
 
         #self._end_turn(game, ball_carrier)
 
 
-    def _get_safest_block(self, game):
+    def _get_safest_block(self, game, my_team):
         block_attacker = None
         block_defender = None
         block_p_self_up = None
         block_p_opp_down = None
         block_p_fumble_self = None
         block_p_fumble_opp = None
-        for attacker in self.my_team.players:
+        for attacker in my_team.players:
             if attacker.position is not None and not attacker.state.used and attacker.state.up:
                 for defender in game.get_adjacent_opponents(attacker, down=False):
                     p_self, p_opp, p_fumble_self, p_fumble_opp = game.get_block_probs(attacker, defender)
