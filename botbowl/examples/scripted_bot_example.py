@@ -10,7 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
-TIME_THINKING = 1.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+TIME_THINKING = 180.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
@@ -236,7 +236,7 @@ class MyScriptedBot2(ProcBot):
         self._make_plan(game, ball_carrier)
         action = self._get_next_action()
         return action
-    
+
     def _get_next_action(self):
         action = self.actions[0]
         self.actions = self.actions[1:]
@@ -251,10 +251,10 @@ class MyScriptedBot2(ProcBot):
         if (self.orden_operaciones == []):
             # trasteo random
             # self.orden_operaciones = self._random_orden_operaciones()
-            self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            # self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
             # estrategia OSLA
-            #self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
+            self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
 
         #print(self.orden_operaciones)
 
@@ -315,8 +315,8 @@ class MyScriptedBot2(ProcBot):
                                                        opp_team_copy)
 
                 # Update teams
-                my_team_copy = game_copy.get_team_by_id(my_team_copy.team_id)
-                opp_team_copy = game_copy.get_team_by_id(opp_team_copy.team_id)
+                # my_team_copy = game_copy.get_team_by_id(my_team_copy.team_id)
+                # opp_team_copy = game_copy.get_team_by_id(opp_team_copy.team_id)
 
                 if actual_actions is not None:
                     # print(game_copy.home_agent.my_team.players)
