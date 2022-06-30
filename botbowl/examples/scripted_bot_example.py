@@ -10,7 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
-TIME_THINKING = 180.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+TIME_THINKING = 45.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
@@ -252,6 +252,7 @@ class MyScriptedBot2(ProcBot):
             # trasteo random
             # self.orden_operaciones = self._random_orden_operaciones()
             # self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            # self.orden_operaciones = [7, 5, 3, 2, 0, 1, 9, 8, 4, 6]
 
             # estrategia OSLA
             self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
@@ -274,7 +275,6 @@ class MyScriptedBot2(ProcBot):
         Does an OSLA
         :Returns: The List of index of functions that must be called in that order
         """
-
         initial_time = time.time()
         time_difference = budget * 0.9
 
@@ -300,23 +300,23 @@ class MyScriptedBot2(ProcBot):
         root_step = game_copy.get_step()
 
         best_combination = None
-        # best_combination = self._random_orden_operaciones()
 
         # bucle para el OSLA
         while time.time() - initial_time < time_difference:
 
             # generar nueva combinacion de acciones
-            nueva_combinacion_operaciones = self._random_orden_operaciones()
-            # nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            # nueva_combinacion_operaciones = self._random_orden_operaciones()
+            nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            # nueva_combinacion_operaciones = [7, 5, 3, 2, 0, 1, 9, 8, 6, 4]
 
             # ejecutar la combinacion en el game_copy
             for operation in nueva_combinacion_operaciones:
-                actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy,
-                                                       opp_team_copy)
-
                 # Update teams
-                # my_team_copy = game_copy.get_team_by_id(my_team_copy.team_id)
-                # opp_team_copy = game_copy.get_team_by_id(opp_team_copy.team_id)
+                my_team_copy = game_copy.get_team_by_id(my_team_copy.team_id)
+                opp_team_copy = game_copy.get_opp_team(my_team_copy)
+
+                actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy, opp_team_copy)
+                # actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, self.my_team, self.opp_team)
 
                 if actual_actions is not None:
                     # print(game_copy.home_agent.my_team.players)
@@ -358,15 +358,17 @@ class MyScriptedBot2(ProcBot):
                 puntos -= 1
 
         # mirar si el jugador con bola está protegido
-        cage_positions = [
-            Square(game.get_ball_position().x - 1, game.get_ball_position().y - 1),
-            Square(game.get_ball_position().x + 1, game.get_ball_position().y - 1),
-            Square(game.get_ball_position().x - 1, game.get_ball_position().y + 1),
-            Square(game.get_ball_position().x + 1, game.get_ball_position().y + 1)
-        ]
-        for cage_position in cage_positions:
-            if game.get_player_at(cage_position) is not None:
-                puntos += 1
+        aux_ball_position = game.get_ball_position()
+        if aux_ball_position is not None:   #comprobar que estamos en un estado con bola en el campo
+            cage_positions = [
+                Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
+                Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
+                Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
+                Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
+            ]
+            for cage_position in cage_positions:
+                if game.get_player_at(cage_position) is not None:
+                    puntos += 1
 
         # mirar los jugadores rivales tumbados o estuneados
         for rival_player in opp_team.players:

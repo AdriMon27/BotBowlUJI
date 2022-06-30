@@ -18,8 +18,10 @@ if __name__ == '__main__':
     # Play 10 games
     for i in range(1):
         home_agent = botbowl.make_bot('first')
+        # home_agent = botbowl.make_bot('my-random-bot')
         home_agent.name = "Bot 1"
         away_agent = botbowl.make_bot('my-random-bot')
+        # away_agent = botbowl.make_bot('first')
         away_agent.name = "Bot 2"
         game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
