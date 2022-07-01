@@ -16,7 +16,7 @@ if __name__ == '__main__':
     away = botbowl.load_team_by_filename("human", ruleset)
 
     # Play 10 games
-    for i in range(1):
+    for i in range(10):
         home_agent = botbowl.make_bot('first')
         # home_agent = botbowl.make_bot('my-random-bot')
         home_agent.name = "Bot 1"

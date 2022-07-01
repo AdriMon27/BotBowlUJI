@@ -315,6 +315,14 @@ class MyScriptedBot2(ProcBot):
                 my_team_copy = game_copy.get_team_by_id(my_team_copy.team_id)
                 opp_team_copy = game_copy.get_opp_team(my_team_copy)
 
+                #Esto lo he puesto porque me ha salido un error que no me había salido antes de que en cierto daba error porque el tamaño de available_actions es 0
+                #entonces cuando sea, será END_TURN si no entiendo mal la logica del juego, y que acabe la combinación
+                # End turn if only action left
+                if len(game_copy.state.available_actions) == 1:
+                    if game_copy.state.available_actions[0].action_type == ActionType.END_TURN:
+                        game_copy.step(Action(ActionType.END_TURN))
+                        break
+
                 actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy, opp_team_copy)
                 # actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, self.my_team, self.opp_team)
 
@@ -1201,7 +1209,10 @@ def path_to_move_actions(game: botbowl.Game, player: botbowl.Player, path: Path,
         if action_type is ActionType.MOVE:
             assert player_at_target is None or player_at_target is game.get_active_player()
         elif action_type is ActionType.BLOCK:
-            assert game.get_opp_team(active_team) is player_at_target.team
+            try:
+                assert game.get_opp_team(active_team) is player_at_target.team
+            except:
+                raise Exception("ojfowj")
             assert player_at_target.state.up
         elif action_type is ActionType.FOUL:
             assert game.get_opp_team(active_team) is player_at_target.team
