@@ -824,31 +824,33 @@ class MyScriptedBot2(ProcBot):
             if player.position is not None and not player.state.used and game.num_tackle_zones_in(player) == 0:
                 open_players.append(player)
 
-        cage_positions = [
-            Square(game.get_ball_position().x - 1, game.get_ball_position().y - 1),
-            Square(game.get_ball_position().x + 1, game.get_ball_position().y - 1),
-            Square(game.get_ball_position().x - 1, game.get_ball_position().y + 1),
-            Square(game.get_ball_position().x + 1, game.get_ball_position().y + 1)
-        ]
-        if ball_carrier is not None:
-            for cage_position in cage_positions:
-                if game.get_player_at(cage_position) is None and not game.is_out_of_bounds(cage_position):
-                    for player in open_players:
-                        if player == ball_carrier or player.position in cage_positions:
-                            continue
-                        if player.position.distance(cage_position) > player.num_moves_left():
-                            continue
-                        if game.num_tackle_zones_in(player) > 0:
-                            continue
-                        path = pf.get_safest_path(game, player, cage_position)
-                        if path is not None and path.prob > 0.94:
-                            #self.actions.append(Action(ActionType.START_MOVE, player=player))
-                            #self.actions.extend(path_to_move_actions(game, player, path))
-                            actions = []
-                            actions.append(Action(ActionType.START_MOVE, player=player))
-                            actions.extend(path_to_move_actions(game, player, path))
+        aux_ball_position = game.get_ball_position()
+        if aux_ball_position is not None:  # comprobar que estamos en un estado con bola en el campo
+            cage_positions = [
+                Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
+                Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
+                Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
+                Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
+            ]
+            if ball_carrier is not None:
+                for cage_position in cage_positions:
+                    if game.get_player_at(cage_position) is None and not game.is_out_of_bounds(cage_position):
+                        for player in open_players:
+                            if player == ball_carrier or player.position in cage_positions:
+                                continue
+                            if player.position.distance(cage_position) > player.num_moves_left():
+                                continue
+                            if game.num_tackle_zones_in(player) > 0:
+                                continue
+                            path = pf.get_safest_path(game, player, cage_position)
+                            if path is not None and path.prob > 0.94:
+                                #self.actions.append(Action(ActionType.START_MOVE, player=player))
+                                #self.actions.extend(path_to_move_actions(game, player, path))
+                                actions = []
+                                actions.append(Action(ActionType.START_MOVE, player=player))
+                                actions.extend(path_to_move_actions(game, player, path))
 
-                            return actions
+                                return actions
 
         return None
 
