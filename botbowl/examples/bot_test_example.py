@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from scripted_bot_example import *
+from scripted_bot_example_original import *
 from random_bot_example import *
 
 import botbowl as botbowl
@@ -15,13 +16,15 @@ if __name__ == '__main__':
     home = botbowl.load_team_by_filename("human", ruleset)
     away = botbowl.load_team_by_filename("human", ruleset)
 
-    # Play 10 games
-    for i in range(10):
+    # Play x games
+    for i in range(5):
         home_agent = botbowl.make_bot('first')
         # home_agent = botbowl.make_bot('my-random-bot')
-        home_agent.name = "Bot 1"
-        away_agent = botbowl.make_bot('my-random-bot')
+        # home_agent = botbowl.make_bot('scripted')
+        home_agent.name = "Bot UJI"
         # away_agent = botbowl.make_bot('first')
+        #away_agent = botbowl.make_bot('my-random-bot')
+        away_agent = botbowl.make_bot('scripted')
         away_agent.name = "Bot 2"
         game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

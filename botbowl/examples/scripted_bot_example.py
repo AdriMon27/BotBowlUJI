@@ -305,8 +305,8 @@ class MyScriptedBot2(ProcBot):
         while time.time() - initial_time < time_difference:
 
             # generar nueva combinacion de acciones
-            # nueva_combinacion_operaciones = self._random_orden_operaciones()
-            nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            nueva_combinacion_operaciones = self._random_orden_operaciones()
+            # nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             # nueva_combinacion_operaciones = [7, 5, 3, 2, 0, 1, 9, 8, 6, 4]
 
             # ejecutar la combinacion en el game_copy
@@ -323,21 +323,23 @@ class MyScriptedBot2(ProcBot):
                         game_copy.step(Action(ActionType.END_TURN))
                         break
 
-                actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy, opp_team_copy)
-                # actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, self.my_team, self.opp_team)
+                #parche para evitar que salga el AsssertionError
+                if game_copy.active_team == my_team_copy:
+                    actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy, opp_team_copy)
+                    # actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, self.my_team, self.opp_team)
 
-                if actual_actions is not None:
-                    # print(game_copy.home_agent.my_team.players)
-                    # print(my_team_copy.players)
-                    for action in actual_actions:
-                        if game_copy._is_action_allowed(action):
-                            game_copy.step(action)
-                    # print(game_copy.home_agent.my_team.players)
-                    # print(my_team_copy.players)
+                    if actual_actions is not None:
+                        # print(game_copy.home_agent.my_team.players)
+                        # print(my_team_copy.players)
+                        for action in actual_actions:
+                            if game_copy._is_action_allowed(action):
+                                game_copy.step(action)
+                        # print(game_copy.home_agent.my_team.players)
+                        # print(my_team_copy.players)
 
-                    # estas 2 lineas las he copiado tal cual, no se exactamente como funcionan
-                    while not game.state.game_over and len(game.state.available_actions) == 0:
-                        game_copy.step()
+                        # estas 2 lineas las he copiado tal cual, no se exactamente como funcionan
+                        while not game.state.game_over and len(game.state.available_actions) == 0:
+                            game_copy.step()
 
             # insertar la combinacion al mapa de combinacion-evaluacion
             tuplaOperaciones = tuple(nueva_combinacion_operaciones)
@@ -525,7 +527,7 @@ class MyScriptedBot2(ProcBot):
                 return actions
         else:
             actions.append(self._end_turn(game, ball_carrier))
-            print("Fuera de rango -> End_turn")
+            #print("Fuera de rango -> End_turn")
             return actions
 
         #self._end_turn(game, ball_carrier)
@@ -1210,7 +1212,8 @@ def path_to_move_actions(game: botbowl.Game, player: botbowl.Player, path: Path,
             assert player_at_target is None or player_at_target is game.get_active_player()
         elif action_type is ActionType.BLOCK:
             try:
-                assert game.get_opp_team(active_team) is player_at_target.team
+                a = game.get_opp_team(active_team)
+                assert a is player_at_target.team
             except:
                 raise Exception("ojfowj")
             assert player_at_target.state.up
