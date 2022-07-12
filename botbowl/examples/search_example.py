@@ -113,12 +113,10 @@ class SearchBot(botbowl.Agent):
     def end_game(self, game):
         pass
 
+# Register the bot to the framework
+botbowl.register_bot('search-bot', SearchBot)
 
 if __name__ == '__main__':
-
-    # Register the bot to the framework
-    botbowl.register_bot('search-bot', SearchBot)
-
     # Load configurations, rules, arena and teams
     config = botbowl.load_config("bot-bowl")
     ruleset = botbowl.load_rule_set(config.ruleset)
