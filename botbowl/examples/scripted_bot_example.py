@@ -357,68 +357,67 @@ class MyScriptedBot2(ProcBot):
     def _evaluate(self, game, my_team, opp_team):
         puntos = 0
 
-        if game.is_home_team(my_team):
-            # mirar los jugadores
-            for player in my_team.players:
-                # Que tenemos de pie y no estuneados
-                if player.position is not None and player.state.up and not player.state.stunned:
+        # mirar los jugadores
+        for player in my_team.players:
+            # Que tenemos de pie y no estuneados
+            if player.position is not None and player.state.up and not player.state.stunned:
+                puntos += 1
+
+            # Que no han sido usados
+            if not player.state.used:
+                puntos -= 1
+
+        # mirar si el jugador con bola está protegido
+        aux_ball_position = game.get_ball_position()
+        if aux_ball_position is not None:   #comprobar que estamos en un estado con bola en el campo
+            cage_positions = [
+                Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
+                Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
+                Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
+                Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
+            ]
+            for cage_position in cage_positions:
+                if game.get_player_at(cage_position) is not None:
                     puntos += 1
 
-                # Que no han sido usados
-                if not player.state.used:
-                    puntos -= 1
-
-            # mirar si el jugador con bola está protegido
-            aux_ball_position = game.get_ball_position()
-            if aux_ball_position is not None:   #comprobar que estamos en un estado con bola en el campo
-                cage_positions = [
-                    Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
-                    Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
-                    Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
-                    Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
-                ]
-                for cage_position in cage_positions:
-                    if game.get_player_at(cage_position) is not None:
-                        puntos += 1
-
-            # mirar los jugadores rivales tumbados o estuneados
-            for rival_player in opp_team.players:
-                if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
-                    puntos += 1
-        else:
-            # mirar los jugadores
-            for player in my_team.players:
-                # Que tenemos de pie y no estuneados
-                if player.position is not None and player.state.up and not player.state.stunned:
-                    puntos += 1
-
-                # Que no han sido usados
-                if not player.state.used:
-                    puntos -= 1
-
-            # mirar si el jugador con bola está protegido
-            aux_ball_position = game.get_ball_position()
-            if aux_ball_position is not None:  # comprobar que estamos en un estado con bola en el campo
-                cage_positions = [
-                    Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
-                    Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
-                    Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
-                    Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
-                ]
-                for cage_position in cage_positions:
-                    if game.get_player_at(cage_position) is not None:
-                        puntos += 1
-
-                #mirar distancia para marcar
-                if not game.is_home_team(my_team):  # metemos a la derecha
-                    puntos += aux_ball_position.x
-                else:                               # metemos a la izquierda
-                    puntos += (game.state.pitch.width) - aux_ball_position.x
-
-            # mirar los jugadores rivales tumbados o estuneados
-            for rival_player in opp_team.players:
-                if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
-                    puntos += 1
+        # mirar los jugadores rivales tumbados o estuneados
+        for rival_player in opp_team.players:
+            if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
+                puntos += 1
+        # else:
+        #     # mirar los jugadores
+        #     for player in my_team.players:
+        #         # Que tenemos de pie y no estuneados
+        #         if player.position is not None and player.state.up and not player.state.stunned:
+        #             puntos += 1
+        #
+        #         # Que no han sido usados
+        #         if not player.state.used:
+        #             puntos -= 1
+        #
+        #     # mirar si el jugador con bola está protegido
+        #     aux_ball_position = game.get_ball_position()
+        #     if aux_ball_position is not None:  # comprobar que estamos en un estado con bola en el campo
+        #         cage_positions = [
+        #             Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
+        #             Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
+        #             Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
+        #             Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
+        #         ]
+        #         for cage_position in cage_positions:
+        #             if game.get_player_at(cage_position) is not None:
+        #                 puntos += 1
+        #
+        #         #mirar distancia para marcar
+        #         if not game.is_home_team(my_team):  # metemos a la derecha
+        #             puntos += aux_ball_position.x
+        #         else:                               # metemos a la izquierda
+        #             puntos += (game.state.pitch.width) - aux_ball_position.x
+        #
+        #     # mirar los jugadores rivales tumbados o estuneados
+        #     for rival_player in opp_team.players:
+        #         if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
+        #             puntos += 1
 
         return puntos
 
