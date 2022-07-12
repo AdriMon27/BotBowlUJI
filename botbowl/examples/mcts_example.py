@@ -98,8 +98,11 @@ def AdrianHeuristic(game: botbowl.Game, agent:botbowl.Agent):
             Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
         ]
         for cage_position in cage_positions:
-            if game.get_player_at(cage_position) is not None:
-                puntos += 1
+            try:
+                if game.get_player_at(cage_position) is not None:
+                    puntos += 1
+            except:
+                puntos += 0
 
     # mirar los jugadores rivales tumbados o estuneados
     for rival_player in opp_team.players:
