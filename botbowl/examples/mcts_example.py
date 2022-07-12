@@ -1,3 +1,5 @@
+from botbowl import Square
+
 import botbowl
 from botbowl.core import Action
 import numpy as np
@@ -72,6 +74,39 @@ def simple_heuristic(game: botbowl.Game, agent:botbowl.Agent):
             opp += 0.1
     return 0.5 + own - opp
 
+def AdrianHeuristic(game: botbowl.Game, agent:botbowl.Agent):
+    # mirar los jugadores
+    my_team = game.get_agent_team(agent)
+    opp_team = game.get_opp_team(my_team)
+    puntos = 0
+    for player in my_team.players:
+        # Que tenemos de pie y no estuneados
+        if player.position is not None and player.state.up and not player.state.stunned:
+            puntos += 1
+
+        # Que no han sido usados
+        if not player.state.used:
+            puntos -= 1
+
+    # mirar si el jugador con bola está protegido
+    aux_ball_position = game.get_ball_position()
+    if aux_ball_position is not None:  # comprobar que estamos en un estado con bola en el campo
+        cage_positions = [
+            Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
+            Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
+            Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
+            Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
+        ]
+        for cage_position in cage_positions:
+            if game.get_player_at(cage_position) is not None:
+                puntos += 1
+
+    # mirar los jugadores rivales tumbados o estuneados
+    for rival_player in opp_team.players:
+        if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
+            puntos += 1
+
+    return puntos
 
 class Node:
 
@@ -274,7 +309,7 @@ class MCTSBot(botbowl.Agent):
                  tree_policy=ucb1,
                  action_policy=random_policy,
                  final_policy=most_visited,
-                 heuristic=simple_heuristic,
+                 heuristic=AdrianHeuristic,
                  seconds=5,
                  seed=None):
         super().__init__(name)
