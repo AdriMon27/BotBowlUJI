@@ -10,7 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
-TIME_THINKING = 45.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+TIME_THINKING = 5.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
@@ -290,24 +290,32 @@ class MyScriptedBot2(ProcBot):
 
         home_team = game_copy.get_agent_team(game_copy.home_agent)
         away_team = game_copy.get_agent_team(game_copy.away_agent)
+
         if home_team == self.my_team:
             my_team_copy = home_team
             opp_team_copy = away_team
+            i_am_home = True
         else:
             my_team_copy = away_team
             opp_team_copy = home_team
+            i_am_home = False
 
         root_step = game_copy.get_step()
 
         best_combination = None
 
+        # print("***")
         # bucle para el OSLA
         while time.time() - initial_time < time_difference:
 
             # generar nueva combinacion de acciones
             nueva_combinacion_operaciones = self._random_orden_operaciones()
-            # nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-            # nueva_combinacion_operaciones = [7, 5, 3, 2, 0, 1, 9, 8, 6, 4]
+
+            #guardar score antes de actuar
+            if i_am_home:
+                prev_score = game_copy.state.home_team.state.score
+            else:
+                prev_score = game_copy.state.away_team.state.score
 
             # ejecutar la combinacion en el game_copy
             for operation in nueva_combinacion_operaciones:
@@ -326,16 +334,11 @@ class MyScriptedBot2(ProcBot):
                 #parche para evitar que salga el AsssertionError
                 if game_copy.active_team == my_team_copy:
                     actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy, opp_team_copy)
-                    # actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, self.my_team, self.opp_team)
 
                     if actual_actions is not None:
-                        # print(game_copy.home_agent.my_team.players)
-                        # print(my_team_copy.players)
                         for action in actual_actions:
                             if game_copy._is_action_allowed(action):
                                 game_copy.step(action)
-                        # print(game_copy.home_agent.my_team.players)
-                        # print(my_team_copy.players)
 
                         # estas 2 lineas las he copiado tal cual, no se exactamente como funcionan
                         while not game.state.game_over and len(game.state.available_actions) == 0:
@@ -343,7 +346,7 @@ class MyScriptedBot2(ProcBot):
 
             # insertar la combinacion al mapa de combinacion-evaluacion
             tuplaOperaciones = tuple(nueva_combinacion_operaciones)
-            combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy)
+            combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy, prev_score, i_am_home)
             combinations_evaluations_map[hash(tuplaOperaciones)] = combination_score
             # Y comprobar si es mejor que la previa mejor combinacion
             if best_combination is None or combination_score > combinations_evaluations_map[hash(best_combination)]:
@@ -352,9 +355,42 @@ class MyScriptedBot2(ProcBot):
             # revertir los cambios
             game_copy.revert(root_step)
 
+        # print(best_combination)
         return best_combination
 
-    def _evaluate(self, game, my_team, opp_team):
+    def simple_heuristic_casero(self, game, my_team):
+        own_team = my_team
+        opp_team = game.get_opp_team(own_team)
+        own_score = own_team.state.score
+        opp_score = opp_team.state.score
+        own_kos = len(game.get_knocked_out(own_team))
+        opp_kos = len(game.get_knocked_out(opp_team))
+        own_cas = len(game.get_casualties(own_team))
+        opp_cas = len(game.get_casualties(opp_team))
+        own_stunned = len([p for p in game.get_players_on_pitch(own_team, up=False) if p.state.stunned])
+        opp_stunned = len([p for p in game.get_players_on_pitch(opp_team, up=False) if p.state.stunned])
+        own_down = len([p for p in game.get_players_on_pitch(own_team, up=False) if not p.state.stunned])
+        opp_down = len([p for p in game.get_players_on_pitch(opp_team, up=False) if not p.state.stunned])
+        own_ejected = len(game.get_dungeon(own_team))
+        opp_ejected = len(game.get_dungeon(opp_team))
+        own_has_ball = False
+        opp_has_ball = False
+        ball_carrier = game.get_ball_carrier()
+        if ball_carrier is not None:
+            own_has_ball = 1 if ball_carrier.team == own_team else 0
+            opp_has_ball = 1 if ball_carrier.team == opp_team else 0
+        own = own_score / 10 + own_has_ball / 20 - (
+                    own_cas + own_ejected) / 30 - own_kos / 50 - own_stunned / 100 - own_down / 200
+        opp = opp_score / 10 + opp_has_ball / 20 - (
+                    opp_cas + opp_ejected) / 30 - opp_kos / 50 - opp_stunned / 100 - opp_down / 200
+        if game.state.game_over:
+            if game.get_winning_team() == my_team:
+                own += 0.1
+            elif game.get_winner() is None:
+                opp += 0.1
+        return 0.5 + own - opp
+
+    def _evaluate(self, game, my_team, opp_team, prev_score, i_am_home):
         puntos = 0
 
         # mirar los jugadores
@@ -384,40 +420,15 @@ class MyScriptedBot2(ProcBot):
         for rival_player in opp_team.players:
             if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
                 puntos += 1
-        # else:
-        #     # mirar los jugadores
-        #     for player in my_team.players:
-        #         # Que tenemos de pie y no estuneados
-        #         if player.position is not None and player.state.up and not player.state.stunned:
-        #             puntos += 1
-        #
-        #         # Que no han sido usados
-        #         if not player.state.used:
-        #             puntos -= 1
-        #
-        #     # mirar si el jugador con bola está protegido
-        #     aux_ball_position = game.get_ball_position()
-        #     if aux_ball_position is not None:  # comprobar que estamos en un estado con bola en el campo
-        #         cage_positions = [
-        #             Square(aux_ball_position.x - 1, aux_ball_position.y - 1),
-        #             Square(aux_ball_position.x + 1, aux_ball_position.y - 1),
-        #             Square(aux_ball_position.x - 1, aux_ball_position.y + 1),
-        #             Square(aux_ball_position.x + 1, aux_ball_position.y + 1)
-        #         ]
-        #         for cage_position in cage_positions:
-        #             if game.get_player_at(cage_position) is not None:
-        #                 puntos += 1
-        #
-        #         #mirar distancia para marcar
-        #         if not game.is_home_team(my_team):  # metemos a la derecha
-        #             puntos += aux_ball_position.x
-        #         else:                               # metemos a la izquierda
-        #             puntos += (game.state.pitch.width) - aux_ball_position.x
-        #
-        #     # mirar los jugadores rivales tumbados o estuneados
-        #     for rival_player in opp_team.players:
-        #         if rival_player is not None and (not rival_player.state.up or rival_player.state.stunned):
-        #             puntos += 1
+
+        #mirar si hemos marcado gol
+        marcar_gol_points = 50
+        if i_am_home:
+            if prev_score < game.state.home_team.state.score:
+                puntos += marcar_gol_points
+        else:
+            if prev_score < game.state.away_team.state.score:
+                puntos += marcar_gol_points
 
         return puntos
 

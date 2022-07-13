@@ -28,11 +28,11 @@ if __name__ == '__main__':
         # home_agent = botbowl.make_bot('scripted')
         # home_agent = botbowl.make_bot('search-bot')
         home_agent.name = "Bot UJI"
-        # away_agent = botbowl.make_bot('first')
+        away_agent = botbowl.make_bot('first')
         # away_agent = botbowl.make_bot('my-random-bot')
         # away_agent = botbowl.make_bot('scripted')
         # away_agent = botbowl.make_bot("search-bot")
-        away_agent = botbowl.make_bot("mcts")
+        # away_agent = botbowl.make_bot("mcts")
         away_agent.name = "Bot 2"
         game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
