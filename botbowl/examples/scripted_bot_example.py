@@ -304,12 +304,17 @@ class MyScriptedBot2(ProcBot):
 
         best_combination = None
 
-        # print("***")
+        first_check = True
+
         # bucle para el OSLA
         while time.time() - initial_time < time_difference:
 
             # generar nueva combinacion de acciones
-            nueva_combinacion_operaciones = self._random_orden_operaciones()
+            if first_check:
+                nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+                first_check = False
+            else:
+                nueva_combinacion_operaciones = self._random_orden_operaciones()
 
             #guardar score antes de actuar
             if i_am_home:
