@@ -10,7 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
-TIME_THINKING = 10.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+TIME_THINKING = 1.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
@@ -251,11 +251,11 @@ class MyScriptedBot2(ProcBot):
         if (self.orden_operaciones == []):
             # trasteo random
             # self.orden_operaciones = self._random_orden_operaciones()
-            self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            # self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             # self.orden_operaciones = [7, 5, 3, 2, 0, 1, 9, 8, 4, 6]
 
             # estrategia OSLA
-            # self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
+            self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
 
         #print(self.orden_operaciones)
 
@@ -314,8 +314,8 @@ class MyScriptedBot2(ProcBot):
                 nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
                 first_check = False
             else:
-                # nueva_combinacion_operaciones = self._random_orden_operaciones()
-                nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+                nueva_combinacion_operaciones = self._random_orden_operaciones()
+                # nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
             #guardar score antes de actuar
             if i_am_home:
@@ -324,7 +324,9 @@ class MyScriptedBot2(ProcBot):
                 prev_score = game_copy.state.away_team.state.score
 
             # ejecutar la combinacion en el game_copy
-            for operation in nueva_combinacion_operaciones:
+            i = 0
+            while i < len(nueva_combinacion_operaciones):
+
                 # Update teams
                 my_team_copy = game_copy.get_team_by_id(my_team_copy.team_id)
                 opp_team_copy = game_copy.get_opp_team(my_team_copy)
@@ -339,21 +341,45 @@ class MyScriptedBot2(ProcBot):
 
                 #parche para evitar que salga el AsssertionError
                 if game_copy.active_team == my_team_copy:
-                    actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(), operation, my_team_copy, opp_team_copy)
 
-                    if actual_actions is not None:
+                    all_not_allowed = True
+                    while all_not_allowed and i < len(nueva_combinacion_operaciones):
+                        actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(),
+                                                               nueva_combinacion_operaciones[i], my_team_copy,
+                                                               opp_team_copy)
+                        while actual_actions is None:
+                            i += 1
+                            if i >= len(nueva_combinacion_operaciones):
+                                break
+                            actual_actions = self._strategy_random(game_copy, game_copy.get_ball_carrier(),
+                                                                   nueva_combinacion_operaciones[i], my_team_copy,
+                                                                   opp_team_copy)
+                        if i >= len(nueva_combinacion_operaciones):
+                            break
+
                         for action in actual_actions:
                             if game_copy._is_action_allowed(action):
                                 game_copy.step(action)
+                                all_not_allowed = False
 
-                        # estas 2 lineas las he copiado tal cual, no se exactamente como funcionan
-                        while not game.state.game_over and len(game.state.available_actions) == 0:
-                            game_copy.step()
+                        if all_not_allowed:
+                            i += 1
+
+                    # estas 2 lineas las he copiado tal cual, no se exactamente como funcionan
+                    while not game.state.game_over and len(game.state.available_actions) == 0:
+                        game_copy.step()
+
+                    #si no hemos hecho end_turn
+                    if i < len(nueva_combinacion_operaciones):
+                        i = 0
+
+                else:
+                    i += 1
 
             # insertar la combinacion al mapa de combinacion-evaluacion
             tuplaOperaciones = tuple(nueva_combinacion_operaciones)
-            combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy, prev_score, i_am_home)
-            # combination_score = self.simple_heuristic_casero(game_copy, my_team_copy)
+            # combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy, prev_score, i_am_home)
+            combination_score = self.simple_heuristic_casero(game_copy, my_team_copy)
             # print(str(tuplaOperaciones) + ": " + str(combination_score))
             combinations_evaluations_map[hash(tuplaOperaciones)] = combination_score
             # Y comprobar si es mejor que la previa mejor combinacion
@@ -363,7 +389,7 @@ class MyScriptedBot2(ProcBot):
             # revertir los cambios
             game_copy.revert(root_step)
 
-        print(best_combination)
+        # print(best_combination)
         return best_combination
 
     def simple_heuristic_casero(self, game, my_team):
