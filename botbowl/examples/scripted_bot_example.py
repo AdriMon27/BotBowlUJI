@@ -10,7 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
-TIME_THINKING = 5.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+TIME_THINKING = 10.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
@@ -251,15 +251,16 @@ class MyScriptedBot2(ProcBot):
         if (self.orden_operaciones == []):
             # trasteo random
             # self.orden_operaciones = self._random_orden_operaciones()
-            # self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            self.orden_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             # self.orden_operaciones = [7, 5, 3, 2, 0, 1, 9, 8, 4, 6]
 
             # estrategia OSLA
-            self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
+            # self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
 
         #print(self.orden_operaciones)
 
         #añadir acciones a self.acciones
+        self.index_operacion = 0
         actions = []
         actions = self._check_index_operacion_in_range(game, ball_carrier)
 
@@ -268,7 +269,6 @@ class MyScriptedBot2(ProcBot):
             actions = self._check_index_operacion_in_range(game, ball_carrier)
 
         self._add_actions(actions)
-        self.index_operacion += 1
 
     def _act_in_game_copy(self, game, ball_carrier, budget):
         """
@@ -314,7 +314,8 @@ class MyScriptedBot2(ProcBot):
                 nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
                 first_check = False
             else:
-                nueva_combinacion_operaciones = self._random_orden_operaciones()
+                # nueva_combinacion_operaciones = self._random_orden_operaciones()
+                nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
             #guardar score antes de actuar
             if i_am_home:
@@ -352,6 +353,8 @@ class MyScriptedBot2(ProcBot):
             # insertar la combinacion al mapa de combinacion-evaluacion
             tuplaOperaciones = tuple(nueva_combinacion_operaciones)
             combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy, prev_score, i_am_home)
+            # combination_score = self.simple_heuristic_casero(game_copy, my_team_copy)
+            # print(str(tuplaOperaciones) + ": " + str(combination_score))
             combinations_evaluations_map[hash(tuplaOperaciones)] = combination_score
             # Y comprobar si es mejor que la previa mejor combinacion
             if best_combination is None or combination_score > combinations_evaluations_map[hash(best_combination)]:
@@ -360,7 +363,7 @@ class MyScriptedBot2(ProcBot):
             # revertir los cambios
             game_copy.revert(root_step)
 
-        # print(best_combination)
+        print(best_combination)
         return best_combination
 
     def simple_heuristic_casero(self, game, my_team):
@@ -441,13 +444,6 @@ class MyScriptedBot2(ProcBot):
         """
         Funcion que devuelve una List<Int> que indica el orden aleatoria para las funciones de la estrategia
         """
-        # if len(self.orden_operaciones) == 0: #aun no esta ordenado
-        #    i = 0
-        #    while i < self.n_operaciones:
-        #        a_meter = random.randint(0, self.n_operaciones-1)
-        #        if not a_meter in self.orden_operaciones:
-        #            self.orden_operaciones.append(a_meter)
-        #            i += 1
         i = 0
         orden = []
         while i < self.n_operaciones:

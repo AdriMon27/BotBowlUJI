@@ -22,15 +22,15 @@ if __name__ == '__main__':
     wins_away = 0
     ties = 0
     # Play x games
-    for i in range(10):
+    for i in range(100):
         home_agent = botbowl.make_bot('first')
         # home_agent = botbowl.make_bot('my-random-bot')
         # home_agent = botbowl.make_bot('scripted')
         # home_agent = botbowl.make_bot('search-bot')
         home_agent.name = "Bot UJI"
-        away_agent = botbowl.make_bot('first')
+        # away_agent = botbowl.make_bot('first')
         # away_agent = botbowl.make_bot('my-random-bot')
-        # away_agent = botbowl.make_bot('scripted')
+        away_agent = botbowl.make_bot('scripted')
         # away_agent = botbowl.make_bot("search-bot")
         # away_agent = botbowl.make_bot("mcts")
         away_agent.name = "Bot 2"
