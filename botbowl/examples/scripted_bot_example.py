@@ -232,7 +232,6 @@ class MyScriptedBot2(ProcBot):
         #hacer el orden aleatorio de funciones, reciclar para OSLA
         #si ya existe pues reusar
         #aqui hacer  lo del FM
-        #self._random_orden_operaciones()
         self._make_plan(game, ball_carrier)
         action = self._get_next_action()
         return action
@@ -256,8 +255,6 @@ class MyScriptedBot2(ProcBot):
 
             # estrategia OSLA
             self.orden_operaciones = self._act_in_game_copy(game, ball_carrier, TIME_THINKING)
-
-        #print(self.orden_operaciones)
 
         #añadir acciones a self.acciones
         self.index_operacion = 0
@@ -315,7 +312,6 @@ class MyScriptedBot2(ProcBot):
                 first_check = False
             else:
                 nueva_combinacion_operaciones = self._random_orden_operaciones()
-                # nueva_combinacion_operaciones = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
             #guardar score antes de actuar
             if i_am_home:
@@ -379,7 +375,7 @@ class MyScriptedBot2(ProcBot):
             # insertar la combinacion al mapa de combinacion-evaluacion
             tuplaOperaciones = tuple(nueva_combinacion_operaciones)
             # combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy, prev_score, i_am_home)
-            combination_score = self.simple_heuristic_casero(game_copy, my_team_copy)
+            combination_score = self.simple_heuristic_casero(game_copy, my_team_copy, prev_score, i_am_home)
             # print(str(tuplaOperaciones) + ": " + str(combination_score))
             combinations_evaluations_map[hash(tuplaOperaciones)] = combination_score
             # Y comprobar si es mejor que la previa mejor combinacion
@@ -389,10 +385,10 @@ class MyScriptedBot2(ProcBot):
             # revertir los cambios
             game_copy.revert(root_step)
 
-        # print(best_combination)
+        print(best_combination)
         return best_combination
 
-    def simple_heuristic_casero(self, game, my_team):
+    def simple_heuristic_casero(self, game, my_team, prev_score, i_am_home):
         own_team = my_team
         opp_team = game.get_opp_team(own_team)
         own_score = own_team.state.score
@@ -422,7 +418,18 @@ class MyScriptedBot2(ProcBot):
                 own += 0.1
             elif game.get_winner() is None:
                 opp += 0.1
-        return 0.5 + own - opp
+
+        #mirar si hemos marcado gol
+        puntos = 0
+        marcar_gol_points = 50
+        if i_am_home:
+            if prev_score < game.state.home_team.state.score:
+                puntos += marcar_gol_points
+        else:
+            if prev_score < game.state.away_team.state.score:
+                puntos += marcar_gol_points
+
+        return 0.5 + own - opp + puntos
 
     def _evaluate(self, game, my_team, opp_team, prev_score, i_am_home):
         puntos = 0
@@ -556,7 +563,6 @@ class MyScriptedBot2(ProcBot):
         :returns: The list of actions of that function
         """
         actions = []
-        #for i in self.orden_operaciones:
         if num_function == 0:
             actions = self._stand_up_marked_players(game, ball_carrier, my_team)
             if actions is not None:
