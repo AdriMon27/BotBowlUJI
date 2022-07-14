@@ -10,7 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
-TIME_THINKING = 1.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+TIME_THINKING = 10.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
@@ -376,8 +376,14 @@ class MyScriptedBot2(ProcBot):
             tuplaOperaciones = tuple(nueva_combinacion_operaciones)
             # combination_score = self._evaluate(game_copy, my_team_copy, opp_team_copy, prev_score, i_am_home)
             combination_score = self.simple_heuristic_casero(game_copy, my_team_copy, prev_score, i_am_home)
-            # print(str(tuplaOperaciones) + ": " + str(combination_score))
-            combinations_evaluations_map[hash(tuplaOperaciones)] = combination_score
+
+            #si el dato ya está metido pues hacer la media
+            hashTupla = hash(tuplaOperaciones)
+            if hashTupla in combinations_evaluations_map:
+                combinations_evaluations_map[hashTupla] = (combinations_evaluations_map[hashTupla] + combination_score) / 2
+            else:
+                combinations_evaluations_map[hashTupla] = combination_score
+
             # Y comprobar si es mejor que la previa mejor combinacion
             if best_combination is None or combination_score > combinations_evaluations_map[hash(best_combination)]:
                 best_combination = tuplaOperaciones
