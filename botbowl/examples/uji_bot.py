@@ -12,7 +12,7 @@ import random
 
 TIME_THINKING = 5.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
-class MyScriptedBot2(ProcBot):
+class BotUji(ProcBot):
 
     def __init__(self, name):
         super().__init__(name)
@@ -1326,7 +1326,7 @@ def path_to_move_actions(game: botbowl.Game, player: botbowl.Player, path: Path,
 
 
 # Register MyScriptedBot
-botbowl.register_bot('first', MyScriptedBot2)
+botbowl.register_bot('botuji', BotUji)
 
 
 def main():

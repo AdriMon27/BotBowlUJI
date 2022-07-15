@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from scripted_bot_example import *
+from uji_bot import *
 
 import botbowl.web.server as server
 

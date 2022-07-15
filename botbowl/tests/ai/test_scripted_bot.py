@@ -1,5 +1,5 @@
 import botbowl
-from examples.scripted_bot_example import MyScriptedBot
+from examples.uji_bot import MyScriptedBot
 from examples.random_bot_example import MyRandomBot
 
 from tests.util import get_game_coin_toss

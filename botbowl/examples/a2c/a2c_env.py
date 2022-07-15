@@ -2,7 +2,7 @@ from pprint import pprint
 
 from botbowl import OutcomeType, Game
 import botbowl.core.procedure as procedure
-from examples.scripted_bot_example import MyScriptedBot
+from examples.uji_bot import MyScriptedBot
 
 
 class A2C_Reward:

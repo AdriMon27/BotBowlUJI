@@ -7,7 +7,7 @@ import botbowl.core.pathfinding as pf
 
 from botbowl import Action, ActionType, Skill, Square, Formation, BBDieResult
 from botbowl.core.pathfinding import Path
-from examples.scripted_bot_example import path_to_move_actions
+from examples.uji_bot import path_to_move_actions
 
 
 class MyBot1(botbowl.ProcBot):
