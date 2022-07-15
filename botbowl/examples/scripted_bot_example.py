@@ -10,7 +10,7 @@ import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
 import random
 
-TIME_THINKING = 10.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
+TIME_THINKING = 5.0 #HE PUESTO 1 SEGUNDO DE PRIMERAS, LUEGO CAMBIAR CUANDO RESPONDAN EN EL SERVER
 
 class MyScriptedBot2(ProcBot):
 
